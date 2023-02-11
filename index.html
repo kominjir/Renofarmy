@@ -1,0 +1,331 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <meta name="viewport"
+    content="width=device-width, initial-scale=1">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.js"></script>
+
+    <script src="data/parcely.js"></script>
+    <script src="data/bloky.js"></script>
+  
+    <style>
+   html {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+      body {
+        height: 100%;
+        width: 100%;
+        padding-top: 60px;
+        
+      }
+      #map {
+        height: 100%;
+        width: 100%;
+      }
+
+      .leaflet-tooltip {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+    </style>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-default navbar-fixed-top">
+      
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Renofarmy</a>
+        </div>
+
+        <div class="navbar-form navbar-right">
+          Vyhledávání podle LV
+          <div id="searchControlContainer"></div>
+        </div>
+
+        <div class="navbar-form navbar-right">
+          Vyhledávání podle parcely
+          <div id="searchControlContainer2"></div>
+        </div>
+      </div>
+    </nav>
+
+
+
+
+
+
+
+
+    <div id="map"></div>
+    <script>
+
+
+
+
+      var map = L.map('map').setView([49.54, 17.56], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+
+      
+
+
+
+      map.getPane('tooltipPane').style.display = 'none';
+
+var lastZoom;
+var tooltipThreshold = 16;
+map.on('zoomend', function() {
+    var zoom = map.getZoom();
+    if (zoom < tooltipThreshold && (!lastZoom || lastZoom >= tooltipThreshold)) {
+        map.getPane('tooltipPane').style.display = 'none';
+    } else if (zoom >= tooltipThreshold && (!lastZoom || lastZoom < tooltipThreshold)) { 
+        map.getPane('tooltipPane').style.display = 'block';
+    }
+    lastZoom = zoom;
+})
+
+
+
+
+
+
+
+
+
+
+      var layerA;
+var layerB;
+
+
+function onEachFeature(feature, layer) {
+    
+    if (1>0) {
+
+      const props = layer.feature.properties;
+  const tooltipContent = `
+    <div>
+      <strong>Parcelní číslo:</strong> ${props.parcela}<br>
+      <strong>LV:</strong> ${props.LV}<br>
+      <strong>Výměra (m2) a typ:</strong> ${props.vymera} ${props.typ}
+    </div>
+  `;
+        layer.bindPopup(tooltipContent);
+        layer.feature.properties.searchItem = layer.feature.properties.LV;
+        layer.feature.properties.searchItem2 = layer.feature.properties.parcela;
+        layer.bindTooltip("<b>"+feature.properties.parcela+"</b>", {permanent: true, opacity: 0.7});
+
+    }
+}
+function onEachFeature2(feature, layer) {
+    
+    if (1>0) {
+      const props = layer.feature.properties;
+      const tooltipContent = `
+    <div>
+      <strong>id bloku:</strong> ${props.id}<br>
+      <strong>kultura</strong> ${props.kultura}<br>
+      <strong>uživatel</strong> ${props.uzivatel} 
+    </div>
+  `;
+        layer.bindPopup(tooltipContent);
+        layer.bindTooltip("<b>"+feature.properties.id+"</b>", {permanent: true, opacity: 0.7});
+        layer.feature.properties.searchItem = layer.feature.properties.idUzivatel + ', ' + layer.feature.properties.ICO;
+    }
+}
+
+
+
+
+
+     
+   layerA = L.geoJSON(parcely,   {style: function (feature) {
+ 
+    return {
+      fillColor: "red",
+      fillOpacity: 0,
+      color: "black",
+      weight: 0.5
+    };
+  },
+    onEachFeature: onEachFeature,
+
+  });
+
+
+
+
+
+   layerB = L.geoJSON(bloky, {  style: function (feature) {
+    var userId = feature.properties.idUzivatel;
+    var fillColor;
+    if (userId == 5410) {
+      fillColor = "green";
+    } else {
+      fillColor = "brown";
+    }
+
+    return {
+      fillColor: fillColor,
+      color: fillColor,
+      weight: 2,
+      opacity:0.8
+    };
+  },
+    onEachFeature: onEachFeature2,
+
+  });
+
+ 
+
+
+
+
+
+
+  var searchControl = new L.Control.Search({
+  layer: layerA,
+  textPlaceholder:"Podle LV",
+  propertyName:  'searchItem',
+  
+  marker: false,
+  title: "Vyhledávání pomocí LV",
+  moveToLocation: function(latlng, title, map) {
+    map.fitBounds(latlng.layer.getBounds());
+  }
+});
+
+
+
+
+var searchControl2 = new L.Control.Search({
+  layer: layerA,
+  textPlaceholder:"Podle parcely",
+  propertyName:  'searchItem2',
+
+  marker: false,
+  position:	"topright",
+  title: "Vyhledávání pomocí LV",
+  moveToLocation: function(latlng, title, map) {
+    map.fitBounds(latlng.layer.getBounds());
+  }
+});
+
+
+searchControl2.on('search:locationfound', function(e) {
+var parcela = e.layer.feature.properties.parcela;
+layerA.eachLayer(function(layer) {
+  if (layer.feature.properties.parcela === parcela) {
+    layer.setStyle({fillColor: 'yellow', fillOpacity: 0.5});
+    if (layer._popup) {
+      layer.openPopup();
+    }
+  }
+
+  if (layer.feature.properties.parcela === parcela) {
+    layer.setStyle({fillColor: 'yellow', fillOpacity: 0.5});
+    if (layer._popup) {
+      layer.openPopup();
+    }
+  }
+
+
+}
+
+
+);
+}).on('search:collapsed', function(e) {
+layerA.eachLayer(function(layer) {  
+  layerA.resetStyle(layer);
+}); 
+});
+
+
+
+searchControl.on('search:locationfound', function(e) {
+
+
+  var LV = e.layer.feature.properties.LV;
+  var parcela = e.layer.feature.properties.parcela;
+  layerA.eachLayer(function(layer) {
+    if (layer.feature.properties.LV === LV) {
+      layer.setStyle({fillColor: 'yellow', fillOpacity: 0.5});
+      if (layer._popup) {
+        layer.openPopup();
+      }
+    }
+
+    if (layer.feature.properties.parcela === parcela) {
+      layer.setStyle({fillColor: 'yellow', fillOpacity: 0.5});
+      if (layer._popup) {
+        layer.openPopup();
+      }
+    }
+  
+
+  }
+  
+  
+  );
+}).on('search:collapsed', function(e) {
+  layerA.eachLayer(function(layer) {  
+    layerA.resetStyle(layer);
+  }); 
+});
+
+
+
+
+
+
+map.addControl(searchControl);
+map.addControl(searchControl2);
+
+
+
+      var layerC = L.tileLayer.wms("https://geoportal.cuzk.cz/WMS_ORTOFOTO_PUB/WMService.aspx", {
+        layers: 'GR_ORTFOTORGB',
+        format: 'image/png',
+        transparent: true,
+        attribution: "CUZK Geoportal",
+        opacity: 0.8
+      });
+
+      var baseMaps = {
+        "OpenStreetMap": map,
+        "Ortofoto": layerC
+      };
+
+      var overlayMaps = {
+        "parcely": layerA,
+        "půdní bloky": layerB
+      };
+
+      L.control.layers(baseMaps, overlayMaps, {
+        collapsed:false,
+      }).addTo(map);
+      document.getElementById('searchControlContainer').appendChild(searchControl.getContainer());
+      document.getElementById('searchControlContainer2').appendChild(searchControl2.getContainer());
+      // Doplnění geojson dat do vrstev
+      /* ... */
+
+    </script>
+  </body>
+</html>
+
